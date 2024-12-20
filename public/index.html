@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard</title>
+    <style>
+        /* Global styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ff6f61, #ffcc00);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+
+        /* Container for the content */
+        .container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        /* Heading styles */
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #ff6347;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #ff6f61;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        /* Styling for the leaderboard list */
+        #leaderboard {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        /* List item styles */
+        #leaderboard li {
+            background-color: #ffffff;
+            color: #333;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        /* Hover effect for leaderboard items */
+        #leaderboard li:hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Rank styles */
+        .rank {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2a9d8f;
+        }
+
+        /* Name and score styles */
+        .player {
+            font-size: 1.2rem;
+            color: #333;
+        }
+
+        .score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #e76f51;
+        }
+
+        /* Input and button styles */
+        .input-container {
+            margin-top: 30px;
+        }
+
+        button {
+            background-color: #2a9d8f;
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #264653;
+        }
+
+        /* Message styling */
+        #message {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #264653;
+        }
+
+        /* Score styling */
+        #score {
+            font-size: 1.2rem;
+            color: #e76f51;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* Additional styles for mobile responsiveness */
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+                width: 90%;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            h2 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                font-size: 1rem;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Leaderboard</h1>
+        <div id="message"></div>
+        <div id="score"></div>
+
+        <h2>Top Players</h2>
+        <ol id="leaderboard"></ol>
+
+
+    </div>
+
+    <script>
+        // Function to check if the user has a name cookie
+        function getCookie(name) {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(name + '=')) {
+                    return cookie.substring(name.length + 1);
+                }
+            }
+            return null;
+        }
+
+        // Function to set a cookie
+        function setCookie(name, value, days) {
+            const date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));  // Set expiration date
+            const expires = "expires=" + date.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        // Function to fetch leaderboard data from the backend
+        async function getLeaderboard() {
+            const response = await fetch('/api/leaderboard');
+            const data = await response.json();
+            return data;
+        }
+
+        // Function to update the score on the backend
+        async function updateScore(name, score) {
+            const response = await fetch('/api/update-score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, score })
+            });
+            const data = await response.json();
+            return data;
+        }
+
+        // Function to handle the user interaction
+        async function handleUser() {
+            let user = getCookie('user'); // Check if the user cookie exists
+            let leaderboard = await getLeaderboard(); // Get leaderboard data
+
+            if (user) {
+                // User is already known, increase score by 1
+                let score = leaderboard.find(entry => entry.name === user)?.score || 0;
+                score++;
+                setCookie('score', score, 30); // Set new score cookie
+                await updateScore(user, 1); // Update score on the backend
+                document.getElementById('message').innerText = `Welcome back, ${user}! Your score has increased.`;
+                document.getElementById('score').innerText = `Your score: ${score}`;
+            } else {
+                // No user cookie, ask for name
+                let name = prompt("Welcome! Please enter your name:");
+                if (name) {
+                    // Set the user cookie and initialize their score to 0
+                    setCookie('user', name, 30);
+                    await updateScore(name, 0); // Initialize score on the backend
+                    document.getElementById('message').innerText = `Hello, ${name}! Your score is 0.`;
+                    document.getElementById('score').innerText = `Your score: 0`;
+                }
+            }
+
+            // Render the leaderboard
+            renderLeaderboard();
+        }
+
+        // Function to render the leaderboard
+        async function renderLeaderboard() {
+            let leaderboard = await getLeaderboard();
+            const leaderboardContainer = document.getElementById('leaderboard');
+            leaderboardContainer.innerHTML = ''; // Clear existing leaderboard
+
+            leaderboard.forEach((entry, index) => {
+                const listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    <span class="rank">${index + 1}</span>
+                    <span class="player">${entry.name}</span>
+                    <span class="score">${entry.score} points</span>
+                `;
+                leaderboardContainer.appendChild(listItem);
+            });
+        }
+
+        // Execute the function when the page loads
+        window.onload = handleUser;
+    </script>
+</body>
+</html>
